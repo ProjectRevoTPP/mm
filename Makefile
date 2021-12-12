@@ -5,15 +5,38 @@ MAKEFLAGS += --no-builtin-rules
 # If COMPARE is 1, check the output md5sum after building
 COMPARE ?= 1
 # If NON_MATCHING is 1, define the NON_MATCHING C flag when building
-NON_MATCHING ?= 0
+NON_MATCHING ?= 1
 # If ORIG_COMPILER is 1, compile with QEMU_IRIX and the original compiler
 ORIG_COMPILER ?= 0
 # Keep .mdebug section in build
 KEEP_MDEBUG ?= 0
+# If COMPILER is GCC, compile with GCC instead of IDO.
+COMPILER ?= ido
+# Declare ZAPDFLAGS used for ZAPD's flags.
+ZAPDFLAGS ?=
+# Declare CPPFLAGS used for the preprocessor.
+CPPFLAGS ?=
+
+# ORIG_COMPILER cannot be combined with a non-IDO compiler. Check for this case and error out if found.
+ifneq ($(COMPILER),ido)
+  ifeq ($(ORIG_COMPILER),1)
+    $(error ORIG_COMPILER can only be used with the IDO compiler. Please check your Makefile variables and try again)
+  endif
+endif
+
+# If gcc is used, define the NON_MATCHING flag respectively so the files that
+# are safe to be used can avoid using GLOBAL_ASM which doesn't work with gcc.
+ifeq ($(COMPILER),gcc)
+  $(warning WARNING: GCC support is experimental. Use at your own risk.)
+  CPPFLAGS += -DCOMPILER_GCC
+  ZAPDFLAGS += --gcc-compat
+  NON_MATCHING := 1
+  NON_EQUIVALENT := 1
+endif
 
 ifeq ($(NON_MATCHING),1)
-  CFLAGS := -DNON_MATCHING
-  CPPFLAGS := -DNON_MATCHING
+  CFLAGS += -DNON_MATCHING
+  CPPFLAGS += -DNON_MATCHING
   COMPARE := 0
 endif
 
@@ -87,7 +110,7 @@ MKLDSCRIPT := tools/buildtools/mkldscript
 YAZ0       := tools/buildtools/yaz0
 ZAPD       := tools/ZAPD/ZAPD.out
 
-OPTFLAGS := -O2 -g3
+OPTFLAGS := -O2
 ASFLAGS := -march=vr4300 -32 -Iinclude
 MIPS_VERSION := -mips2
 
@@ -187,6 +210,17 @@ build/src/overlays/fbdemos/%.o: CC := python3 tools/asm-processor/build.py $(CC)
 build/src/overlays/gamestates/%.o: CC := python3 tools/asm-processor/build.py $(CC) -- $(AS) $(ASFLAGS) --
 build/src/overlays/kaleido_scope/%.o: CC := python3 tools/asm-processor/build.py $(CC) -- $(AS) $(ASFLAGS) --
 
+#### GCC Override ###
+
+include gcc_safe_files.mk
+
+ifeq ($(COMPILER),gcc)
+  $(SAFE_C_FILES): CC = mips-linux-gnu-gcc -c
+  $(SAFE_C_FILES): CFLAGS := -G 0 -nostdinc -Iinclude -Isrc -Iassets -Ibuild -I. -DNON_MATCHING=1 -DNON_EQUIVALENT=1 -DAVOID_UB=1 -mno-shared -march=vr4300 -mfix4300 -mabi=32 -mhard-float -mdivide-breaks -fno-stack-protector -fno-common -fno-zero-initialized-in-bss -mno-abicalls -fno-strict-aliasing -fno-inline-functions -fno-inline-small-functions -fno-toplevel-reorder -ffreestanding -fwrapv $(CHECK_WARNINGS) -g -mno-explicit-relocs -mno-split-addresses -funsigned-char
+  $(SAFE_C_FILES): MIPS_VERSION := -mips3
+  $(SAFE_C_FILES): OPTFLAGS := -O2
+endif
+
 #### Main Targets ###
 
 uncompressed: $(ROM)
@@ -278,30 +312,30 @@ build/data/%.o: data/%.s
 
 build/src/overlays/%.o: src/overlays/%.c
 	$(CC) -c $(CFLAGS) $(MIPS_VERSION) $(OPTFLAGS) -o $@ $<
-	$(CC_CHECK) $<
+	#$(CC_CHECK) $<
 	@$(OBJDUMP) -d $@ > $(@:.o=.s)
 # TODO: `() || true` is currently necessary to suppress `Error 1 (ignored)` make warnings caused by `test`, but this will go away if 
 # 	the following is moved to a separate rule that is only run once when all the required objects have been compiled. 
 	$(ZAPD) bovl -eh -i $@ -cfg $< --outputpath $(@D)/$(notdir $(@D))_reloc.s
-	(test -f $(@D)/$(notdir $(@D))_reloc.s && $(AS) $(ASFLAGS) $(@D)/$(notdir $(@D))_reloc.s -o $(@D)/$(notdir $(@D))_reloc.o) || true
+	(test -f $(@D)/$(notdir $(@D))_reloc.s && $(AS) $(ASFLAGS) $(@D)/$(notdir $(@D))_reloc.s -o $(@D)/$(notdir $(@D))_reloc.o) || true $(ZAPDFLAGS)
 	$(RM_MDEBUG)
 
 build/src/%.o: src/%.c
 	$(CC) -c $(CFLAGS) $(MIPS_VERSION) $(OPTFLAGS) -o $@ $<
-	$(CC_CHECK) $<
+	#$(CC_CHECK) $<
 	@$(OBJDUMP) -d $@ > $(@:.o=.s)
 	$(RM_MDEBUG)
 
 build/src/libultra/libc/ll.o: src/libultra/libc/ll.c
 	$(CC) -c $(CFLAGS) $(MIPS_VERSION) $(OPTFLAGS) -o $@ $<
-	$(CC_CHECK) $<
+	#$(CC_CHECK) $<
 	python3 tools/set_o32abi_bit.py $@
 	@$(OBJDUMP) -d $@ > $(@:.o=.s)
 	$(RM_MDEBUG)
 
 build/src/libultra/libc/llcvt.o: src/libultra/libc/llcvt.c
 	$(CC) -c $(CFLAGS) $(MIPS_VERSION) $(OPTFLAGS) -o $@ $<
-	$(CC_CHECK) $<
+	#$(CC_CHECK) $<
 	python3 tools/set_o32abi_bit.py $@
 	@$(OBJDUMP) -d $@ > $(@:.o=.s)
 	$(RM_MDEBUG)

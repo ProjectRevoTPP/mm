@@ -676,6 +676,10 @@ beginseg
     include_readonly "build/src/code/z_game_over.o"
     include "build/src/code/z_construct.o"
     include "build/data/code/rsp.rodata.o"
+#ifdef COMPILER_GCC
+    include "build/asm/boot/llmuldiv_gcc.text.o"
+    include "build/src/boot_O2/missing_gcc_functions.o"
+#endif
 endseg
 
 beginseg

@@ -26,11 +26,18 @@ typedef union {
 
 extern f32 __libm_qnan_f;
 
-float fabsf(float f);
+f32 fabsf(f32 f);
+#ifndef __sgi
+#define fabsf __builtin_fabsf
+f32 __floatundisf(u32 c);
+f64 __floatundidf(u32 c); 
+unsigned long __udivdi3(unsigned long a, unsigned long b);
+#else
 #pragma intrinsic(fabsf)
-float sqrtf(float f);
+#endif
+f32 sqrtf(f32 f);
 #pragma intrinsic(sqrtf)
-double sqrt(double d);
+f64 sqrt(f64 d);
 #pragma intrinsic(sqrt)
 
 #endif

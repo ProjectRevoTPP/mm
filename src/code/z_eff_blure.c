@@ -1,6 +1,8 @@
 #include "global.h"
 
 #ifdef NON_MATCHING
+f32 D_801DC080 = 0.008f; // HACK FOR GCC RESEARCH, REMOVE ME
+
 void func_800A81F0(EffectBlure* this, Vec3f* p1, Vec3f* p2) {
     EffectBlureElement* elem;
     s32 numElements;

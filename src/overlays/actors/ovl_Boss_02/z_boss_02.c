@@ -1440,7 +1440,7 @@ void Boss02_Draw(Actor* thisx, GlobalContext* globalCtx2) {
         Matrix_Scale(this->actor.scale.x, this->actor.scale.y, this->actor.scale.z, MTXMODE_APPLY);
         Matrix_InsertYRotation_f(M_PI / 2, MTXMODE_APPLY);
         Matrix_RotateStateAroundXAxis(-(M_PI / 2));
-        Matrix_GetStateAsRSPMatrix(&matrix[i]);
+        Matrix_ToMtx(&matrix[i]); // was Matrix_GetStateAsRSPMatrix
 
         gSPMatrix(POLY_OPA_DISP++, &matrix[i], G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW);
 
