@@ -6,8 +6,13 @@
 #define VEC_SET(V,X,Y,Z) V.x=X;V.y=Y;V.z=Z
 
 typedef struct {
+    /* 0x00 */ s16 x;
+    /* 0x02 */ s16 z;
+} Vec2s; // size = 0x04
+
+typedef struct {
     /* 0x00 */ f32 x;
-    /* 0x04 */ f32 y;
+    /* 0x04 */ f32 z;
 } Vec2f; // size = 0x08
 
 typedef struct {
@@ -85,9 +90,10 @@ typedef struct {
     /* 0x06 */ s16 yaw;     // azimuthal angle
 } VecSph; // size = 0x08
 
-#define F32_LERP(v0,v1,t) ((1.0f - (t)) * (v0) + (t) * (v1))
-#define F32_LERPIMP(v0, v1, t) (v0 + ((v1 - v0) * t))
-#define F32_LERPIMPINV(v0, v1, t) ((v0) + (((v1) - (v0)) / (t)))
+#define LERPIMP(v0, v1, t) ((v0) + (((v1) - (v0)) * (t)))
+#define F32_LERP(v0, v1, t) ((1.0f - (t)) * (f32)(v0) + (t) * (f32)(v1))
+#define F32_LERPIMP(v0, v1, t) ((f32)(v0) + (((f32)(v1) - (f32)(v0)) * (t)))
+#define F32_LERPIMPINV(v0, v1, t) ((f32)(v0) + (((f32)(v1) - (f32)(v0)) / (t)))
 #define BINANG_LERPIMP(v0, v1, t) ((v0) + (s16)(BINANG_SUB((v1), (v0)) * (t)))
 #define BINANG_LERPIMPINV(v0, v1, t) ((v0) + BINANG_SUB((v1), (v0)) / (t))
 
